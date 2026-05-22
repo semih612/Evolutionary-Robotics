@@ -1,0 +1,123 @@
+<mujoco model="Final World">
+  <!-- Three-section test terrain: flat -> ice -> hill -->
+  <compiler angle="degree" coordinate="local" inertiafromgeom="true" autolimits="true"/>
+  <option integrator="RK4" timestep="0.01" gravity="0 0 -9.81"/>
+
+  <visual>
+    <headlight diffuse="0.8 0.8 0.9" ambient="0.2 0.2 0.3" specular="0.9 0.9 0.9"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+
+    <texture type="2d" name="flat_tex" builtin="checker" mark="edge"
+             rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="flat_mat" texture="flat_tex" texuniform="true" texrepeat="2 2" reflectance="0.2"/>
+
+    <texture type="2d" name="ice_tex" builtin="checker" mark="edge"
+             rgb1="0.6 0.7 0.9" rgb2="0.7 0.8 1.0" markrgb="0.9 0.9 1.0" width="300" height="300"/>
+    <material name="ice_mat" texture="ice_tex" texuniform="true" texrepeat="2 2" reflectance="0.7"/>
+
+    <texture type="2d" name="hill_tex" builtin="checker" mark="edge"
+             rgb1="0.3 0.3 0.3" rgb2="0.2 0.2 0.2" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="hill_mat" texture="hill_tex" texuniform="true" texrepeat="2 2" reflectance="0.1"/>
+
+    <texture type="2d" name="platform_tex" builtin="checker" mark="edge"
+             rgb1="0.55 0.45 0.3" rgb2="0.45 0.35 0.2" markrgb="0.7 0.6 0.5" width="200" height="200"/>
+    <material name="platform_mat" texture="platform_tex" texuniform="true" texrepeat="2 2" reflectance="0.2"/>
+
+    <texture type="2d" name="bridge_tex" builtin="checker" mark="edge"
+             rgb1="0.4 0.3 0.2" rgb2="0.3 0.2 0.1" markrgb="0.6 0.5 0.4" width="200" height="200"/>
+    <material name="bridge_mat" texture="bridge_tex" texuniform="true" texrepeat="4 1" reflectance="0.2"/>
+
+    <texture type="2d" name="goal_tex" builtin="flat" rgb1="1.0 0.85 0.0" width="100" height="100"/>
+    <material name="goal_mat" texture="goal_tex" texuniform="true" reflectance="0.7" emission="0.6"/>
+
+    <texture type="2d" name="arch_tex" builtin="flat" rgb1="0.95 0.1 0.1" width="100" height="100"/>
+    <material name="arch_mat" texture="arch_tex" texuniform="true" reflectance="0.4" emission="0.4"/>
+
+    <texture type="2d" name="finish_tex" builtin="checker" mark="edge"
+             rgb1="0.0 0.0 0.0" rgb2="1.0 1.0 1.0" markrgb="0.5 0.5 0.5" width="200" height="200"/>
+    <material name="finish_mat" texture="finish_tex" texuniform="true" texrepeat="6 2" reflectance="0.3" emission="0.2"/>
+
+    <!-- terrain.png generated at runtime; x_half=50 covers 100 units (x ∈ [100,200] when pos=150) -->
+    <hfield name="terrain" file="hilly_hfield.png" size="10 5 15 1"/>
+  </asset>
+
+  <worldbody>
+    <!-- Lights -->
+    <light pos="5 0 20" dir="0 0 -1" directional="false"/>
+    <light pos="25 0 20" dir="0 0 -1" directional="false"/>
+    <light pos="45 0 20" dir="0 0 -1" directional="false"/>
+    <light pos="80 0 20" dir="0 0 -1" directional="false"/>
+
+    <!-- Warm gold overhead flood -->
+    <light name="goal_flood" pos="100 0 10" dir="0 0 -1"
+           diffuse="1.0 0.92 0.65" specular="0.6 0.6 0.3"
+           cutoff="40" exponent="8" directional="false"/>
+    <!-- Red dramatic side light from the left -->
+    <light name="goal_red" pos="100 -12 5" dir="0 1 -0.4"
+           diffuse="1.0 0.15 0.15" specular="0.4 0.0 0.0"
+           cutoff="30" exponent="10" directional="false"/>
+    <!-- Blue dramatic side light from the right -->
+    <light name="goal_blue" pos="100 12 5" dir="0 -1 -0.4"
+           diffuse="0.2 0.35 1.0" specular="0.0 0.1 0.5"
+           cutoff="30" exponent="10" directional="false"/>
+
+    <!-- Flat section: x=[-5, 15] (60 units); robot starts at x=0 with buffer -->
+    <geom name="floor" type="box" pos="5 0 -0.5" size="10 5 0.5"
+          material="flat_mat" friction="1 0.5 0.5" condim="3" conaffinity="1" contype="1"/>
+
+    <!-- Ice section: x=[15, 35] (50 units) -->
+    <geom name="ice_floor" type="box" pos="25 0 -0.5" size="10 5 0.5"
+          material="ice_mat" friction="0.2 0.05 0.05" condim="3" conaffinity="1" contype="1" 
+          rgba="0.7 0.85 1.0 1"/>
+
+    <!-- Hill section: x=[35, 55]; terrain.png left edge seamless from ice section -->
+    <geom name="hill" type="hfield" hfield="terrain" material="hill_mat"
+          pos="45 0 0" condim="3" friction="1 0.5 0.5" conaffinity="1" contype="1"/>
+
+    <!-- Platform: wide flat area at hill-top height after the climb; x=[55, 65] -->
+    <geom name="platform" type="box" pos="60 0 1.0" size="5 5 0.3"
+          material="platform_mat" friction="1 0.5 0.5" condim="3" conaffinity="1" contype="1"/>
+
+    <!-- Bridge: narrow section crossing to the goal; x=[65, 95] y=[-1.5, 1.5] -->
+    <geom name="bridge" type="box" pos="80 0 1.0" size="15 1.5 0.15"
+          material="bridge_mat" friction="1 0.5 0.5" condim="3" conaffinity="1" contype="1"/>
+
+    <!-- ── Goal: celebratory finish corridor x=[95, 105] ── -->
+    <!-- Gold floor -->
+    <geom name="goal_floor" type="box" pos="100 0 0.85" size="5 3 0.3"
+          material="goal_mat" friction="1 0.5 0.5" condim="3" conaffinity="1" contype="1"/>
+
+    <!-- Front arch at x=95 (entrance) -->
+    <geom name="arch1_post_l" type="box" pos="95 -3 2.5" size="0.3 0.3 2"
+          material="arch_mat" condim="3" conaffinity="1" contype="1"/>
+    <geom name="arch1_post_r" type="box" pos="95  3 2.5" size="0.3 0.3 2"
+          material="arch_mat" condim="3" conaffinity="1" contype="1"/>
+    <geom name="arch1_banner" type="box" pos="95 0 5" size="0.1 2.5 0.4"
+          material="finish_mat" conaffinity="0" contype="0"/>
+    <geom name="arch1_ball_l" type="sphere" pos="95 -3 5" size="0.4"
+          material="goal_mat" conaffinity="0" contype="0"/>
+    <geom name="arch1_ball_r" type="sphere" pos="95  3 5" size="0.4"
+          material="goal_mat" conaffinity="0" contype="0"/>
+
+    <!-- Back arch at x=105 (exit) — mirrors front -->
+    <geom name="arch2_post_l" type="box" pos="105 -3 2.5" size="0.3 0.3 2.0"
+          material="arch_mat" condim="3" conaffinity="1" contype="1"/>
+    <geom name="arch2_post_r" type="box" pos="105  3 2.5" size="0.3 0.3 2.0"
+          material="arch_mat" condim="3" conaffinity="1" contype="1"/>
+    <geom name="arch2_banner" type="box" pos="105 0 5" size="0.1 2.5 0.4"
+          material="finish_mat" conaffinity="0" contype="0"/>
+    <geom name="arch2_ball_l" type="sphere" pos="105 -3 5" size="0.4"
+          material="goal_mat" conaffinity="0" contype="0"/>
+    <geom name="arch2_ball_r" type="sphere" pos="105  3 5" size="0.4"
+          material="goal_mat" conaffinity="0" contype="0"/>
+
+    <!-- Side rails connecting both arches at the top -->
+    <geom name="rail_l" type="box" pos="100 -3 4.2" size="5 0.15 0.15"
+          material="arch_mat" conaffinity="0" contype="0"/>
+    <geom name="rail_r" type="box" pos="100  3 4.2" size="5 0.15 0.15"
+          material="arch_mat" conaffinity="0" contype="0"/>
+  </worldbody>
+</mujoco>
