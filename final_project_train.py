@@ -37,7 +37,6 @@ from evorob.world.robot.controllers.mlp import NeuralNetworkController
 from evorob.world.robot.morphology.ant_custom_robot import AntRobot
 
 #from map_elites_body_search import run_map_elites_body_search
-from map_elites_body_search_8d import (run_map_elites_body_search_8d, evaluate_selected_best)
 from map_elites_body_search_4d import (run_map_elites_body_search_4d, evaluate_selected_best)
 
 ROOT_DIR = get_project_root()
